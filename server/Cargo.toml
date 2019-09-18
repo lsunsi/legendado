@@ -1,0 +1,21 @@
+[package]
+name = "legendado-server"
+version = "0.1.0"
+authors = ["lsunsi"]
+edition = "2018"
+
+[dependencies]
+rocket = "0.4.2"
+postgres = "0.15"
+rocket_cors = "0.5.0"
+serde_json = "1.0"
+jsonwebtoken = "5.0.1"
+
+[dependencies.rocket_contrib]
+version = "0.4.2"
+default-features = false
+features = ["postgres_pool", "json"]
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]

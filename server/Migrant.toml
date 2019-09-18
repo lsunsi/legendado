@@ -1,0 +1,13 @@
+# Required, do not edit
+database_type = "postgres"
+
+# Required database info
+database_name = "postgres"
+database_user = "postgres"
+database_password = "legendado"
+
+# Configurable database info
+database_host = "database"
+database_port = "5432"
+migration_location = "migrations"
+
