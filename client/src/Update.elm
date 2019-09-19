@@ -53,7 +53,12 @@ update msg model =
             ( { model | subtitles = Done res }, Cmd.none )
 
         SubtitleClicked id ->
-            ( model, Api.getSubtitleForDownload id SubtitleResponseReceived )
+            case model.token of
+                Just token ->
+                    ( model, Api.getSubtitleForDownload token id SubtitleResponseReceived )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         SubtitleResponseReceived (Ok { name, mime, content }) ->
             ( model, FileDownload.bytes name mime content )

@@ -148,7 +148,10 @@ struct SubtitleForDownload {
 }
 
 #[get("/subtitles/<id>")]
-fn subtitle(conn: DatabaseConnection, id: i32) -> Json<SubtitleForDownload> {
+fn subtitle(conn: DatabaseConnection, user: User, id: i32) -> Json<SubtitleForDownload> {
+    let sql = "INSERT INTO downloads (subtitle_id, user_id) VALUES ($1, $2)";
+    conn.execute(sql, &[&id, &user.id]).unwrap();
+
     let sql = "SELECT raw_name, mime, content FROM subtitles where id = $1 LIMIT 1";
     let rows = conn.query(sql, &[&id]).unwrap();
     let row = rows.get(0);
