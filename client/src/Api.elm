@@ -42,9 +42,10 @@ postSubtitleForUpload token { name, mime, content } msg =
 
 subtitleForListDecoder : Decoder SubtitleForList
 subtitleForListDecoder =
-    Dec.map2 SubtitleForList
+    Dec.map3 SubtitleForList
         (Dec.field "id" Dec.int)
         (Dec.field "name" Dec.string)
+        (Dec.field "downloads_count" Dec.int)
 
 
 getSubtitlesForList : (HttpResult (List SubtitleForList) -> msg) -> Cmd msg

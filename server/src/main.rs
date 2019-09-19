@@ -124,17 +124,26 @@ fn upload(conn: DatabaseConnection, user: User, name: String, mime: String, data
 struct SubtitleForList {
     id: i32,
     name: String,
+    downloads_count: i64,
 }
 
 #[get("/subtitles")]
 fn subtitles(conn: DatabaseConnection) -> Json<Vec<SubtitleForList>> {
+    let sql = "
+        SELECT s.id, s.raw_name, (
+            SELECT count(distinct(d.user_id)) FROM downloads d WHERE subtitle_id = s.id
+        )
+        FROM subtitles s
+    ";
+
     Json(
-        conn.query("SELECT id, raw_name FROM subtitles", &[])
+        conn.query(sql, &[])
             .unwrap()
             .into_iter()
             .map(|row| SubtitleForList {
                 id: row.get(0),
                 name: row.get(1),
+                downloads_count: row.get(2),
             })
             .collect(),
     )
