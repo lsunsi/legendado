@@ -25,6 +25,7 @@ type alias SubtitleForUpload =
 type alias SubtitleForList =
     { id : Int
     , name : String
+    , downloadsCount : Int
     }
 
 

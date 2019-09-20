@@ -42,9 +42,10 @@ postSubtitleForUpload token { name, mime, content } msg =
 
 subtitleForListDecoder : Decoder SubtitleForList
 subtitleForListDecoder =
-    Dec.map2 SubtitleForList
+    Dec.map3 SubtitleForList
         (Dec.field "id" Dec.int)
         (Dec.field "name" Dec.string)
+        (Dec.field "downloads_count" Dec.int)
 
 
 getSubtitlesForList : (HttpResult (List SubtitleForList) -> msg) -> Cmd msg
@@ -73,11 +74,16 @@ subtitleForTransferDecoder =
         (Dec.field "content" fileBytesDecoder)
 
 
-getSubtitleForDownload : Int -> (HttpResult SubtitleForDownload -> msg) -> Cmd msg
-getSubtitleForDownload id msg =
-    Http.get
-        { url = Url.relative [ endpoint, "subtitles", String.fromInt id ] []
+getSubtitleForDownload : String -> Int -> (HttpResult SubtitleForDownload -> msg) -> Cmd msg
+getSubtitleForDownload token id msg =
+    Http.request
+        { method = "GET"
+        , headers = [ authorizationHeader token ]
+        , url = Url.relative [ endpoint, "subtitles", String.fromInt id ] []
+        , body = Http.emptyBody
         , expect = Http.expectJson msg subtitleForTransferDecoder
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 
