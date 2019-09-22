@@ -6,7 +6,7 @@ import File
 import Http
 import Json.Decode as Dec exposing (Decoder)
 import Json.Encode as Enc
-import Model exposing (HttpResult, SubtitleForDownload, SubtitleForList, SubtitleForUpload)
+import Model exposing (HttpResult, SubtitleForDownload, SubtitleForList, SubtitleForListFeedback, SubtitleForUpload)
 import Url.Builder as Url
 
 
@@ -40,19 +40,33 @@ postSubtitleForUpload token { name, mime, content } msg =
         }
 
 
+subtitleForListFeedbackDecoder : Decoder SubtitleForListFeedback
+subtitleForListFeedbackDecoder =
+    Dec.map3 SubtitleForListFeedback
+        (Dec.field "key" Dec.string)
+        (Dec.field "count" Dec.int)
+        (Dec.field "voted" Dec.bool)
+
+
 subtitleForListDecoder : Decoder SubtitleForList
 subtitleForListDecoder =
-    Dec.map3 SubtitleForList
+    Dec.map4 SubtitleForList
         (Dec.field "id" Dec.int)
         (Dec.field "name" Dec.string)
         (Dec.field "downloads_count" Dec.int)
+        (Dec.field "feedbacks" (Dec.list subtitleForListFeedbackDecoder))
 
 
-getSubtitlesForList : (HttpResult (List SubtitleForList) -> msg) -> Cmd msg
-getSubtitlesForList msg =
-    Http.get
-        { url = Url.relative [ endpoint, "subtitles" ] []
+getSubtitlesForList : String -> (HttpResult (List SubtitleForList) -> msg) -> Cmd msg
+getSubtitlesForList token msg =
+    Http.request
+        { method = "GET"
+        , headers = [ authorizationHeader token ]
+        , url = Url.relative [ endpoint, "subtitles" ] []
+        , body = Http.emptyBody
         , expect = Http.expectJson msg (Dec.list subtitleForListDecoder)
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 

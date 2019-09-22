@@ -10,6 +10,9 @@ extern crate postgres;
 mod database;
 use database::Connection;
 
+mod subtitle_for_list;
+use subtitle_for_list::SubtitleForList;
+
 use jsonwebtoken::Validation;
 use rocket::http::Status;
 use rocket::request;
@@ -120,33 +123,9 @@ fn upload(conn: Connection, user: User, name: String, mime: String, data: rocket
         .unwrap();
 }
 
-#[derive(serde::Serialize)]
-struct SubtitleForList {
-    id: i32,
-    name: String,
-    downloads_count: i64,
-}
-
 #[get("/subtitles")]
-fn subtitles(conn: Connection) -> Json<Vec<SubtitleForList>> {
-    let sql = "
-        SELECT s.id, s.raw_name, (
-            SELECT count(distinct(d.user_id)) FROM downloads d WHERE subtitle_id = s.id
-        )
-        FROM subtitles s
-    ";
-
-    Json(
-        conn.query(sql, &[])
-            .unwrap()
-            .into_iter()
-            .map(|row| SubtitleForList {
-                id: row.get(0),
-                name: row.get(1),
-                downloads_count: row.get(2),
-            })
-            .collect(),
-    )
+fn subtitles(conn: Connection, user: User) -> Json<Vec<SubtitleForList>> {
+    Json(subtitle_for_list::fetch_all(conn, user.id).unwrap())
 }
 
 #[derive(serde::Serialize)]

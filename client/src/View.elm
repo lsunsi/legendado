@@ -12,10 +12,12 @@ import Update exposing (Msg(..))
 subtitlesListView : List SubtitleForList -> Html Msg
 subtitlesListView list =
     let
-        itemView { id, name, downloadsCount } =
+        itemView { id, name, downloadsCount, feedbacks } =
             li
                 [ onClick (SubtitleClicked id), style "padding" "8px", style "cursor" "pointer" ]
-                [ text (name ++ " (" ++ String.fromInt downloadsCount ++ ")") ]
+                ([ text (name ++ " (" ++ String.fromInt downloadsCount ++ ")") ]
+                    ++ List.map (\feedback -> text feedback.key) feedbacks
+                )
     in
     ul [] (List.map itemView list)
 

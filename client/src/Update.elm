@@ -42,9 +42,14 @@ update msg model =
                     ( model, Cmd.none )
 
         UploadResponseReceived (Ok _) ->
-            ( { model | subtitleForUpload = Nothing, subtitles = Loading }
-            , Api.getSubtitlesForList SubtitlesResponseReceived
-            )
+            case model.token of
+                Just token ->
+                    ( { model | subtitleForUpload = Nothing, subtitles = Loading }
+                    , Api.getSubtitlesForList token SubtitlesResponseReceived
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         UploadResponseReceived (Err _) ->
             ( model, Cmd.none )
@@ -73,7 +78,9 @@ update msg model =
             ( model, Api.login model.emailInput LoginResponseReceived )
 
         LoginResponseReceived (Ok token) ->
-            ( { model | token = Just token }, Cmd.none )
+            ( { model | token = Just token, subtitles = Loading }
+            , Api.getSubtitlesForList token SubtitlesResponseReceived
+            )
 
         LoginResponseReceived (Err _) ->
             ( model, Cmd.none )

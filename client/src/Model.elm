@@ -1,4 +1,4 @@
-module Model exposing (HttpResult, Model, SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
+module Model exposing (HttpResult, Model, SubtitleForDownload, SubtitleForList, SubtitleForListFeedback, SubtitleForUpload, Teledata(..))
 
 import Bytes exposing (Bytes)
 import File exposing (File)
@@ -22,10 +22,18 @@ type alias SubtitleForUpload =
     }
 
 
+type alias SubtitleForListFeedback =
+    { key : String
+    , count : Int
+    , voted : Bool
+    }
+
+
 type alias SubtitleForList =
     { id : Int
     , name : String
     , downloadsCount : Int
+    , feedbacks : List SubtitleForListFeedback
     }
 
 
