@@ -4,3 +4,6 @@ create table feedbacks (
 	user_id int not null references users(id),
 	subtitle_id int not null references subtitles(id)
 );
+
+create unique index feedbacks_user_subtitle
+on feedbacks (user_id, subtitle_id);
