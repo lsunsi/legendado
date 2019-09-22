@@ -7,6 +7,9 @@ extern crate rocket_contrib;
 extern crate jsonwebtoken as jwt;
 extern crate postgres;
 
+mod database;
+use database::Connection;
+
 use jsonwebtoken::Validation;
 use rocket::http::Status;
 use rocket::request;
@@ -18,9 +21,6 @@ use std::io::Read;
 use std::time::SystemTime;
 
 const JWT_SECRET_KEY: &'static str = "puK9gTHNWhvP4vqbyP3hgiHacMfAcdH0";
-
-#[database("pgdb")]
-struct DatabaseConnection(postgres::Connection);
 
 struct User {
     id: i32,
@@ -79,7 +79,7 @@ struct LoginClaims {
 }
 
 #[post("/login", data = "<data>")]
-fn login(conn: DatabaseConnection, data: Json<String>) -> String {
+fn login(conn: Connection, data: Json<String>) -> String {
     let email = data.into_inner();
 
     let rows = conn
@@ -110,7 +110,7 @@ fn login(conn: DatabaseConnection, data: Json<String>) -> String {
 }
 
 #[post("/upload?<name>&<mime>", data = "<data>")]
-fn upload(conn: DatabaseConnection, user: User, name: String, mime: String, data: rocket::Data) {
+fn upload(conn: Connection, user: User, name: String, mime: String, data: rocket::Data) {
     let mut bytes = vec![];
 
     data.open().read_to_end(&mut bytes).unwrap();
@@ -128,7 +128,7 @@ struct SubtitleForList {
 }
 
 #[get("/subtitles")]
-fn subtitles(conn: DatabaseConnection) -> Json<Vec<SubtitleForList>> {
+fn subtitles(conn: Connection) -> Json<Vec<SubtitleForList>> {
     let sql = "
         SELECT s.id, s.raw_name, (
             SELECT count(distinct(d.user_id)) FROM downloads d WHERE subtitle_id = s.id
@@ -157,7 +157,7 @@ struct SubtitleForDownload {
 }
 
 #[get("/subtitles/<id>")]
-fn subtitle(conn: DatabaseConnection, user: User, id: i32) -> Json<SubtitleForDownload> {
+fn subtitle(conn: Connection, user: User, id: i32) -> Json<SubtitleForDownload> {
     let sql = "INSERT INTO downloads (subtitle_id, user_id) VALUES ($1, $2)";
     conn.execute(sql, &[&id, &user.id]).unwrap();
 
@@ -185,7 +185,7 @@ fn main() -> Result<(), rocket_cors::Error> {
     .to_cors()?;
 
     rocket::ignite()
-        .attach(DatabaseConnection::fairing())
+        .attach(Connection::fairing())
         .attach(cors)
         .mount("/", routes![login, upload, subtitles, subtitle])
         .launch();
