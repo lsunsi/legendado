@@ -18,6 +18,10 @@ use rocket::response::status;
 use rocket::Outcome;
 use rocket_contrib::json::Json;
 use std::io::Read;
+use rocket::State;
+
+mod env;
+use env::Env;
 
 mod database;
 use database::Connection;
@@ -25,8 +29,6 @@ use database::Connection;
 mod auth;
 use auth::LoginClaims;
 use auth::PinAuthenticationError;
-
-const JWT_SECRET_KEY: &'static str = "puK9gTHNWhvP4vqbyP3hgiHacMfAcdH0";
 
 struct User {
     id: i32,
@@ -42,6 +44,7 @@ impl<'a, 'r> request::FromRequest<'a, 'r> for User {
     type Error = AuthorizationError;
 
     fn from_request(request: &'a request::Request<'r>) -> request::Outcome<Self, Self::Error> {
+        let env = request.guard::<State<Env>>().unwrap();
         let authorization = request.headers().get_one("Authorization");
 
         let value = match authorization {
@@ -60,7 +63,7 @@ impl<'a, 'r> request::FromRequest<'a, 'r> for User {
 
         let data = jwt::decode::<LoginClaims>(
             &token,
-            JWT_SECRET_KEY.as_ref(),
+            env.jwt_secret_key.as_ref(),
             &Validation {
                 validate_exp: false,
                 ..Validation::default()
@@ -92,13 +95,14 @@ struct PinAuthenticationBody {
 
 #[post("/pin/authenticate", data = "<data>")]
 fn pin_authenticate(
-    conn: Connection,
     data: Json<PinAuthenticationBody>,
+    conn: Connection,
+    env: State<Env>,
 ) -> Result<String, status::BadRequest<Json<PinAuthenticationError>>> {
     match auth::authenticate_pin(&conn, &data.email, &data.pin) {
         Err(err) => Err(status::BadRequest(Some(Json(err)))),
         Ok(claims) => {
-            Ok(jwt::encode(&jwt::Header::default(), &claims, JWT_SECRET_KEY.as_ref()).unwrap())
+            Ok(jwt::encode(&jwt::Header::default(), &claims, env.jwt_secret_key.as_ref()).unwrap())
         }
     }
 }
@@ -179,6 +183,7 @@ fn main() -> Result<(), rocket_cors::Error> {
     .to_cors()?;
 
     rocket::ignite()
+        .manage(env::read())
         .attach(Connection::fairing())
         .attach(cors)
         .mount(
