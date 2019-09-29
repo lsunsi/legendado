@@ -6,10 +6,14 @@ edition = "2018"
 
 [dependencies]
 rocket = "0.4.2"
-postgres = "0.15"
 rocket_cors = "0.5.0"
 serde_json = "1.0"
 jsonwebtoken = "5.0.1"
+rand = "0.7"
+
+[dependencies.postgres]
+version = "0.15"
+features = ["with-chrono"]
 
 [dependencies.rocket_contrib]
 version = "0.4.2"
@@ -19,3 +23,7 @@ features = ["postgres_pool", "json"]
 [dependencies.serde]
 version = "1.0"
 features = ["derive"]
+
+[dependencies.chrono]
+version = "0.4"
+features = ["serde"]
