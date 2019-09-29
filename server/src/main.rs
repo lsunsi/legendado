@@ -4,23 +4,29 @@
 extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
+extern crate chrono;
 extern crate jsonwebtoken as jwt;
 extern crate postgres;
+extern crate rand;
+extern crate rocket_cors;
+extern crate serde;
 
 use jsonwebtoken::Validation;
 use rocket::http::Status;
 use rocket::request;
+use rocket::response::status;
 use rocket::Outcome;
 use rocket_contrib::json::Json;
-use rocket_cors;
-use serde;
 use std::io::Read;
-use std::time::SystemTime;
+
+mod database;
+use database::Connection;
+
+mod auth;
+use auth::LoginClaims;
+use auth::PinAuthenticationError;
 
 const JWT_SECRET_KEY: &'static str = "puK9gTHNWhvP4vqbyP3hgiHacMfAcdH0";
-
-#[database("pgdb")]
-struct DatabaseConnection(postgres::Connection);
 
 struct User {
     id: i32,
@@ -72,45 +78,33 @@ impl<'a, 'r> request::FromRequest<'a, 'r> for User {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-struct LoginClaims {
-    sub: i32,
-    iat: u128,
+#[post("/pin/request", data = "<email>")]
+fn pin_request(conn: Connection, email: Json<String>) {
+    let pin = auth::request_pin(&conn, &email).unwrap();
+    println!("{}", pin);
 }
 
-#[post("/login", data = "<data>")]
-fn login(conn: DatabaseConnection, data: Json<String>) -> String {
-    let email = data.into_inner();
+#[derive(serde::Deserialize)]
+struct PinAuthenticationBody {
+    email: String,
+    pin: String,
+}
 
-    let rows = conn
-        .query("SELECT 1 FROM users WHERE email = $1 LIMIT 1", &[&email])
-        .unwrap();
-
-    if rows.is_empty() {
-        conn.execute("INSERT INTO users (email) VALUES ($1)", &[&email])
-            .unwrap();
+#[post("/pin/authenticate", data = "<data>")]
+fn pin_authenticate(
+    conn: Connection,
+    data: Json<PinAuthenticationBody>,
+) -> Result<String, status::BadRequest<Json<PinAuthenticationError>>> {
+    match auth::authenticate_pin(&conn, &data.email, &data.pin) {
+        Err(err) => Err(status::BadRequest(Some(Json(err)))),
+        Ok(claims) => {
+            Ok(jwt::encode(&jwt::Header::default(), &claims, JWT_SECRET_KEY.as_ref()).unwrap())
+        }
     }
-
-    let rows = conn
-        .query("SELECT id FROM users WHERE email = $1 LIMIT 1", &[&email])
-        .unwrap();
-
-    jwt::encode(
-        &jwt::Header::default(),
-        &LoginClaims {
-            sub: rows.get(0).get(0),
-            iat: SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_millis(),
-        },
-        JWT_SECRET_KEY.as_ref(),
-    )
-    .unwrap()
 }
 
 #[post("/upload?<name>&<mime>", data = "<data>")]
-fn upload(conn: DatabaseConnection, user: User, name: String, mime: String, data: rocket::Data) {
+fn upload(conn: Connection, user: User, name: String, mime: String, data: rocket::Data) {
     let mut bytes = vec![];
 
     data.open().read_to_end(&mut bytes).unwrap();
@@ -128,7 +122,7 @@ struct SubtitleForList {
 }
 
 #[get("/subtitles")]
-fn subtitles(conn: DatabaseConnection) -> Json<Vec<SubtitleForList>> {
+fn subtitles(conn: Connection) -> Json<Vec<SubtitleForList>> {
     let sql = "
         SELECT s.id, s.raw_name, (
             SELECT count(distinct(d.user_id)) FROM downloads d WHERE subtitle_id = s.id
@@ -157,7 +151,7 @@ struct SubtitleForDownload {
 }
 
 #[get("/subtitles/<id>")]
-fn subtitle(conn: DatabaseConnection, user: User, id: i32) -> Json<SubtitleForDownload> {
+fn subtitle(conn: Connection, user: User, id: i32) -> Json<SubtitleForDownload> {
     let sql = "INSERT INTO downloads (subtitle_id, user_id) VALUES ($1, $2)";
     conn.execute(sql, &[&id, &user.id]).unwrap();
 
@@ -185,9 +179,12 @@ fn main() -> Result<(), rocket_cors::Error> {
     .to_cors()?;
 
     rocket::ignite()
-        .attach(DatabaseConnection::fairing())
+        .attach(Connection::fairing())
         .attach(cors)
-        .mount("/", routes![login, upload, subtitles, subtitle])
+        .mount(
+            "/",
+            routes![pin_request, pin_authenticate, upload, subtitles, subtitle],
+        )
         .launch();
 
     Ok(())
