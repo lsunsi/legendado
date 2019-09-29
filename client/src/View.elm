@@ -3,9 +3,9 @@ module View exposing (view)
 import Browser exposing (Document)
 import File
 import Html exposing (Html, button, div, h1, input, li, p, text, ul)
-import Html.Attributes exposing (placeholder, style)
+import Html.Attributes exposing (placeholder, style, value)
 import Html.Events exposing (onClick, onInput)
-import Model exposing (Model, SubtitleForList, Teledata(..))
+import Model exposing (Authentication(..), Model, SubtitleForList, Teledata(..))
 import Update exposing (Msg(..))
 
 
@@ -20,20 +20,37 @@ subtitlesListView list =
     ul [] (List.map itemView list)
 
 
+authorizationView : Authentication -> Html Msg
+authorizationView authentication =
+    case authentication of
+        Unrequested ->
+            div []
+                [ button [ onClick LoginRequestClicked ] [ text "login" ]
+                ]
+
+        RequestEmail emailInput ->
+            div []
+                [ input [ value emailInput, placeholder "email", onInput LoginEmailInputChanged ] []
+                , button [ onClick LoginEmailSubmitClicked ] [ text "login" ]
+                ]
+
+        RequestPin email pinInput ->
+            div []
+                [ div [] [ text email ]
+                , input [ value pinInput, placeholder "pin", onInput LoginPinInputChanged ] []
+                , button [ onClick LoginPinSubmitClicked ] [ text "login" ]
+                ]
+
+        Authenticated email _ ->
+            text ("Logged in as " ++ email)
+
+
 view : Model -> Document Msg
 view model =
     { title = "Legendado"
     , body =
         [ h1 [] [ text "Legendado" ]
-        , case model.token of
-            Just _ ->
-                div [] [ text "logged in" ]
-
-            Nothing ->
-                div []
-                    [ input [ placeholder "email", onInput LoginInputChanged ] []
-                    , button [ onClick LoginButtonClicked ] [ text "login" ]
-                    ]
+        , authorizationView model.authentication
         , case model.subtitleForUpload of
             Just file ->
                 div []

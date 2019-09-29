@@ -4,7 +4,7 @@ import Api
 import File exposing (File)
 import File.Download as FileDownload
 import File.Select as FileSelect
-import Model exposing (HttpResult, Model, SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
+import Model exposing (Authentication(..), HttpResult, Model, SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
 
 
 type Msg
@@ -15,9 +15,13 @@ type Msg
     | SubtitlesResponseReceived (HttpResult (List SubtitleForList))
     | SubtitleClicked Int
     | SubtitleResponseReceived (HttpResult SubtitleForDownload)
-    | LoginInputChanged String
-    | LoginButtonClicked
-    | LoginResponseReceived (HttpResult String)
+    | LoginRequestClicked
+    | LoginEmailInputChanged String
+    | LoginPinInputChanged String
+    | LoginEmailSubmitClicked
+    | LoginPinSubmitClicked
+    | LoginPinRequestResponseReceived (HttpResult ())
+    | LoginPinAuthenticationResponseReceived (HttpResult String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -34,11 +38,11 @@ update msg model =
             ( { model | subtitleForUpload = Just subtitle }, Cmd.none )
 
         UploadConfirmButtonClicked file ->
-            case model.token of
-                Just token ->
+            case model.authentication of
+                Authenticated _ token ->
                     ( model, Api.postSubtitleForUpload token file UploadResponseReceived )
 
-                Nothing ->
+                _ ->
                     ( model, Cmd.none )
 
         UploadResponseReceived (Ok _) ->
@@ -53,11 +57,11 @@ update msg model =
             ( { model | subtitles = Done res }, Cmd.none )
 
         SubtitleClicked id ->
-            case model.token of
-                Just token ->
+            case model.authentication of
+                Authenticated _ token ->
                     ( model, Api.getSubtitleForDownload token id SubtitleResponseReceived )
 
-                Nothing ->
+                _ ->
                     ( model, Cmd.none )
 
         SubtitleResponseReceived (Ok { name, mime, content }) ->
@@ -66,14 +70,54 @@ update msg model =
         SubtitleResponseReceived (Err sub) ->
             ( model, Cmd.none )
 
-        LoginInputChanged email ->
-            ( { model | emailInput = email }, Cmd.none )
+        LoginRequestClicked ->
+            ( { model | authentication = RequestEmail "" }, Cmd.none )
 
-        LoginButtonClicked ->
-            ( model, Api.login model.emailInput LoginResponseReceived )
+        LoginEmailInputChanged email ->
+            ( { model | authentication = RequestEmail email }, Cmd.none )
 
-        LoginResponseReceived (Ok token) ->
-            ( { model | token = Just token }, Cmd.none )
+        LoginPinInputChanged pin ->
+            case model.authentication of
+                RequestPin email _ ->
+                    ( { model | authentication = RequestPin email pin }, Cmd.none )
 
-        LoginResponseReceived (Err _) ->
+                _ ->
+                    ( model, Cmd.none )
+
+        LoginEmailSubmitClicked ->
+            case model.authentication of
+                RequestEmail email ->
+                    ( model, Api.requestLoginPin email LoginPinRequestResponseReceived )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        LoginPinSubmitClicked ->
+            case model.authentication of
+                RequestPin email pin ->
+                    ( model, Api.authenticateLoginPin email pin LoginPinAuthenticationResponseReceived )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        LoginPinRequestResponseReceived (Ok ()) ->
+            case model.authentication of
+                RequestEmail email ->
+                    ( { model | authentication = RequestPin email "" }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        LoginPinRequestResponseReceived (Err _) ->
+            ( model, Cmd.none )
+
+        LoginPinAuthenticationResponseReceived (Ok token) ->
+            case model.authentication of
+                RequestPin email _ ->
+                    ( { model | authentication = Authenticated email token }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        LoginPinAuthenticationResponseReceived (Err _) ->
             ( model, Cmd.none )

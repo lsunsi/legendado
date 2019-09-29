@@ -1,4 +1,4 @@
-module Api exposing (getSubtitleForDownload, getSubtitlesForList, login, postSubtitleForUpload)
+module Api exposing (authenticateLoginPin, getSubtitleForDownload, getSubtitlesForList, postSubtitleForUpload, requestLoginPin)
 
 import Bytes exposing (Bytes)
 import Bytes.Encode as BytesEnc
@@ -87,10 +87,25 @@ getSubtitleForDownload token id msg =
         }
 
 
-login : String -> (HttpResult String -> msg) -> Cmd msg
-login email msg =
+requestLoginPin : String -> (HttpResult () -> msg) -> Cmd msg
+requestLoginPin email msg =
     Http.post
-        { url = Url.relative [ endpoint, "login" ] []
-        , expect = Http.expectString msg
+        { url = Url.relative [ endpoint, "pin", "request" ] []
+        , expect = Http.expectWhatever msg
         , body = Http.jsonBody (Enc.string email)
+        }
+
+
+authenticateLoginPin : String -> String -> (HttpResult String -> msg) -> Cmd msg
+authenticateLoginPin email pin msg =
+    Http.post
+        { url = Url.relative [ endpoint, "pin", "authenticate" ] []
+        , expect = Http.expectString msg
+        , body =
+            Http.jsonBody
+                (Enc.object
+                    [ ( "email", Enc.string email )
+                    , ( "pin", Enc.string pin )
+                    ]
+                )
         }
