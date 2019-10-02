@@ -1,4 +1,4 @@
-module Model exposing (HttpResult, Model, SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
+module Model exposing (Authentication(..), HttpResult, Model, SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
 
 import Bytes exposing (Bytes)
 import File exposing (File)
@@ -36,9 +36,15 @@ type alias SubtitleForDownload =
     }
 
 
+type Authentication
+    = Unrequested
+    | RequestEmail String
+    | RequestPin String String
+    | Authenticated String String
+
+
 type alias Model =
     { subtitleForUpload : Maybe SubtitleForUpload
     , subtitles : Teledata (List SubtitleForList)
-    , token : Maybe String
-    , emailInput : String
+    , authentication : Authentication
     }
