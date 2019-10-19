@@ -3,9 +3,9 @@ module View exposing (view)
 import Browser exposing (Document)
 import File
 import Html exposing (Html, a, button, div, form, h1, h2, header, i, input, label, li, p, section, small, span, text, u, ul)
-import Html.Attributes exposing (class, classList, placeholder, property, style, type_, value)
+import Html.Attributes exposing (class, classList, href, placeholder, property, style, target, title, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
-import Model exposing (Authentication(..), Model, Route(..), SubtitleForList, Teledata(..))
+import Model exposing (Authentication(..), Model, Route(..), SubtitleForList, SubtitleUpload(..), Teledata(..))
 import Update exposing (Msg(..))
 
 
@@ -45,26 +45,29 @@ authorizationView authentication =
             text ("Logged in as " ++ email)
 
 
-authNavbarItem : Authentication -> Html Msg
-authNavbarItem auth =
-    case auth of
-        Unrequested ->
-            a [ class "btn btn-link", onClick LoginRequestClicked ] [ text "entrar" ]
-
-        Authenticated email _ ->
-            div [] [ text "identificado como ", u [] [ text email ] ]
-
-        _ ->
-            div [] [ text "~ autenticando ~" ]
-
-
 navbarView : Authentication -> Html Msg
 navbarView auth =
     header [ class "navbar container", style "height" "36px" ]
         [ section [ class "navbar-section" ]
             [ a [ class "navbar-brand c-hand", onClick NavbarBrandClicked ] [ text "Legendado" ]
             ]
-        , section [ class "navbar-section" ] [ authNavbarItem auth ]
+        , section [ class "navbar-section" ]
+            (case auth of
+                Unrequested ->
+                    [ a [ class "btn btn-link", onClick LoginRequestClicked ] [ text "entrar" ] ]
+
+                Authenticated email _ ->
+                    let
+                        name =
+                            email |> String.split "@" |> List.head |> Maybe.withDefault "amigo"
+                    in
+                    [ a [ onClick UploadsLinkClicked, class "btn btn-link cursor-hand" ] [ text "Uploads" ]
+                    , span [ class "ml-2" ] [ text ("Olá, " ++ name ++ "!") ]
+                    ]
+
+                _ ->
+                    [ div [] [ text "~ autenticando ~" ] ]
+            )
         ]
 
 
@@ -160,12 +163,75 @@ homepageView =
     ]
 
 
-uploadsView : List (Html Msg)
-uploadsView =
-    [ section [ class "hero" ]
+uploadFormView : Model -> Html Msg
+uploadFormView { subtitleUpload } =
+    div [ class "panel" ]
+        (case subtitleUpload of
+            SubtitleUploadUnrequested ->
+                [ div [ class "panel-header" ]
+                    [ div [ class "panel-title text-center" ] [ text "Quer subir uma legenda?" ]
+                    ]
+                , div [ class "panel-footer" ]
+                    [ button [ class "btn btn-primary btn-block", onClick UploadAskButtonClicked ]
+                        [ i [ class "icon icon-upload" ] [] ]
+                    ]
+                ]
+
+            SubtitleUploadSelected file ->
+                [ div [ class "panel-header" ]
+                    [ div [ class "panel-title text-center text-ellipsis", title file.name ] [ text file.name ]
+                    ]
+                , div [ class "panel-footer" ]
+                    [ button [ class "btn btn-success btn-block", onClick (UploadConfirmButtonClicked file) ]
+                        [ i [ class "icon icon-upload" ] [] ]
+                    ]
+                ]
+
+            SubtitleUploadLoading file ->
+                [ div [ class "panel-header" ]
+                    [ div [ class "panel-title text-center text-ellipsis", title file.name ] [ text file.name ]
+                    ]
+                , div [ class "panel-footer" ]
+                    [ button [ class "btn btn-success btn-block loading" ]
+                        [ i [ class "icon icon-upload" ] [] ]
+                    ]
+                ]
+
+            SubtitleUploadSuccess ->
+                [ div [ class "panel-header" ]
+                    [ div [ class "panel-title text-center" ] [ text "Upload rolou demais!" ]
+                    ]
+                , div [ class "panel-footer" ]
+                    [ div [ class "btn-group btn-group-block" ]
+                        [ button [ class "btn mr-2 disabled" ] [ text "compartilhar" ]
+                        , button [ class "btn btn-primary", onClick UploadRestartButtonClicked ] [ text "mais uma" ]
+                        ]
+                    ]
+                ]
+
+            SubtitleUploadFailure ->
+                [ div [ class "panel-header" ]
+                    [ div [ class "panel-title text-center" ] [ text "Algo de errado não deu certo" ]
+                    ]
+                , div [ class "panel-footer" ]
+                    [ div [ class "btn-group btn-group-block" ]
+                        [ a [ class "btn mr-2", href "mailto:sunsi.lucas@gmail.com" ] [ text "me xingar..." ]
+                        , button [ class "btn btn-primary", onClick UploadRestartButtonClicked ] [ text "de novo" ]
+                        ]
+                    ]
+                ]
+        )
+
+
+uploadsView : Model -> List (Html Msg)
+uploadsView model =
+    [ section [ class "hero hero-sm" ]
         [ div [ class "hero-body text-center" ]
             [ h1 [] [ text "Uploads" ]
             ]
+        ]
+    , div [ class "columns", style "justify-content" "center" ]
+        [ div [ class "column col-2" ] [ uploadFormView model ]
         ]
     ]
 
@@ -179,7 +245,7 @@ view model =
                     homepageView
 
                 Uploads ->
-                    uploadsView
+                    uploadsView model
     in
     { title = "Legendado"
     , body =

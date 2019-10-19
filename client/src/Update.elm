@@ -4,7 +4,7 @@ import Api
 import File exposing (File)
 import File.Download as FileDownload
 import File.Select as FileSelect
-import Model exposing (Authentication(..), HttpResult, Model, Route(..), SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
+import Model exposing (Authentication(..), HttpResult, Model, Route(..), SubtitleForDownload, SubtitleForList, SubtitleForUpload, SubtitleUpload(..), Teledata(..))
 
 
 type Msg
@@ -12,6 +12,7 @@ type Msg
     | UploadFileSelected File
     | UploadConfirmButtonClicked SubtitleForUpload
     | UploadResponseReceived (HttpResult ())
+    | UploadRestartButtonClicked
     | SubtitlesResponseReceived (HttpResult (List SubtitleForList))
     | SubtitleClicked Int
     | SubtitleResponseReceived (HttpResult SubtitleForDownload)
@@ -23,6 +24,7 @@ type Msg
     | LoginPinRequestResponseReceived (HttpResult ())
     | LoginPinAuthenticationResponseReceived (HttpResult String)
     | NavbarBrandClicked
+    | UploadsLinkClicked
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -36,23 +38,28 @@ update msg model =
                 subtitle =
                     SubtitleForUpload (File.name file) (File.mime file) file
             in
-            ( { model | subtitleForUpload = Just subtitle }, Cmd.none )
+            ( { model | subtitleUpload = SubtitleUploadSelected subtitle }, Cmd.none )
 
         UploadConfirmButtonClicked file ->
             case model.authentication of
                 Authenticated _ token ->
-                    ( model, Api.postSubtitleForUpload token file UploadResponseReceived )
+                    ( { model | subtitleUpload = SubtitleUploadLoading file }
+                    , Api.postSubtitleForUpload token file UploadResponseReceived
+                    )
 
                 _ ->
-                    ( model, Cmd.none )
+                    ( { model | subtitleUpload = SubtitleUploadFailure }, Cmd.none )
 
         UploadResponseReceived (Ok _) ->
-            ( { model | subtitleForUpload = Nothing, subtitles = Loading }
+            ( { model | subtitleUpload = SubtitleUploadSuccess, subtitles = Loading }
             , Api.getSubtitlesForList SubtitlesResponseReceived
             )
 
         UploadResponseReceived (Err _) ->
-            ( model, Cmd.none )
+            ( { model | subtitleUpload = SubtitleUploadFailure }, Cmd.none )
+
+        UploadRestartButtonClicked ->
+            ( { model | subtitleUpload = SubtitleUploadUnrequested }, Cmd.none )
 
         SubtitlesResponseReceived res ->
             ( { model | subtitles = Done res }, Cmd.none )
@@ -125,3 +132,6 @@ update msg model =
 
         NavbarBrandClicked ->
             ( { model | route = Homepage }, Cmd.none )
+
+        UploadsLinkClicked ->
+            ( { model | route = Uploads }, Cmd.none )
