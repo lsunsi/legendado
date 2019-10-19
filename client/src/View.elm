@@ -5,7 +5,7 @@ import File
 import Html exposing (Html, a, button, div, form, h1, h2, header, i, input, label, li, p, section, small, span, text, u, ul)
 import Html.Attributes exposing (class, classList, placeholder, property, style, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
-import Model exposing (Authentication(..), Model, SubtitleForList, Teledata(..))
+import Model exposing (Authentication(..), Model, Route(..), SubtitleForList, Teledata(..))
 import Update exposing (Msg(..))
 
 
@@ -61,7 +61,9 @@ authNavbarItem auth =
 navbarView : Authentication -> Html Msg
 navbarView auth =
     header [ class "navbar container", style "height" "36px" ]
-        [ section [ class "navbar-section" ] []
+        [ section [ class "navbar-section" ]
+            [ a [ class "navbar-brand c-hand", onClick NavbarBrandClicked ] [ text "Legendado" ]
+            ]
         , section [ class "navbar-section" ] [ authNavbarItem auth ]
         ]
 
@@ -151,13 +153,37 @@ searchView =
         ]
 
 
+homepageView : List (Html Msg)
+homepageView =
+    [ heroView
+    , searchView
+    ]
+
+
+uploadsView : List (Html Msg)
+uploadsView =
+    [ section [ class "hero" ]
+        [ div [ class "hero-body text-center" ]
+            [ h1 [] [ text "Uploads" ]
+            ]
+        ]
+    ]
+
+
 view : Model -> Document Msg
 view model =
+    let
+        routeView =
+            case model.route of
+                Homepage ->
+                    homepageView
+
+                Uploads ->
+                    uploadsView
+    in
     { title = "Legendado"
     , body =
         authModalView model.authentication
-            ++ [ navbarView model.authentication
-               , heroView
-               , searchView
-               ]
+            ++ [ navbarView model.authentication ]
+            ++ routeView
     }

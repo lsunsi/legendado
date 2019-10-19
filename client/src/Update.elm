@@ -4,7 +4,7 @@ import Api
 import File exposing (File)
 import File.Download as FileDownload
 import File.Select as FileSelect
-import Model exposing (Authentication(..), HttpResult, Model, SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
+import Model exposing (Authentication(..), HttpResult, Model, Route(..), SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
 
 
 type Msg
@@ -22,6 +22,7 @@ type Msg
     | LoginPinSubmitClicked
     | LoginPinRequestResponseReceived (HttpResult ())
     | LoginPinAuthenticationResponseReceived (HttpResult String)
+    | NavbarBrandClicked
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -121,3 +122,6 @@ update msg model =
 
         LoginPinAuthenticationResponseReceived (Err _) ->
             ( model, Cmd.none )
+
+        NavbarBrandClicked ->
+            ( { model | route = Homepage }, Cmd.none )
