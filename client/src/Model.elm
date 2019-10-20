@@ -1,4 +1,4 @@
-module Model exposing (Authentication(..), HttpResult, Model, SubtitleForDownload, SubtitleForList, SubtitleForUpload, Teledata(..))
+module Model exposing (Authentication(..), HttpResult, Model, Route(..), SubtitleForDownload, SubtitleForList, SubtitleForUpload, SubtitleUpload(..), Teledata(..))
 
 import Bytes exposing (Bytes)
 import File exposing (File)
@@ -43,8 +43,22 @@ type Authentication
     | Authenticated String String
 
 
+type Route
+    = Homepage
+    | Uploads
+
+
+type SubtitleUpload
+    = SubtitleUploadUnrequested
+    | SubtitleUploadSelected SubtitleForUpload
+    | SubtitleUploadLoading SubtitleForUpload
+    | SubtitleUploadSuccess
+    | SubtitleUploadFailure
+
+
 type alias Model =
-    { subtitleForUpload : Maybe SubtitleForUpload
+    { subtitleUpload : SubtitleUpload
     , subtitles : Teledata (List SubtitleForList)
     , authentication : Authentication
+    , route : Route
     }
