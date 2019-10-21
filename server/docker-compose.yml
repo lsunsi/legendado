@@ -2,6 +2,9 @@ version: '3'
 services:
   server:
     build: .
+    volumes:
+      - ./src:/src
+      - ./tests:/tests
     env_file:
       - .env
     ports:
