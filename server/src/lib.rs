@@ -1,11 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 mod auth;
-mod database;
+pub mod database;
 mod env;
-mod server;
+pub mod server;
 mod user_guard;
-
-fn main() {
-    server::init().unwrap().launch();
-}
